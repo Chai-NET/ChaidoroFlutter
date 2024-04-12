@@ -19,10 +19,12 @@ class SubTaskWidget extends StatelessWidget {
   Widget build(BuildContext context) {
 
     return Dismissible(
+
         key: UniqueKey(),
         onDismissed: (_) async {
           await DbProvider.instance.deleteSubTask(subtaskId);
         },
+        direction: DismissDirection.endToStart,
         background: Container(
           color: Colors.red,
         ),

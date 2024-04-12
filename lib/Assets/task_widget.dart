@@ -20,7 +20,8 @@ class TaskWidget extends StatefulWidget {
 
 class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin{
 
-
+  double startPosition = 0;
+  double swipeValue = 0;
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   // late List<Widget> _ widget.taskMap.value;
@@ -39,7 +40,6 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin{
     _scaleAnimation = TweenSequence<double>(
         [
           TweenSequenceItem(tween: Tween(begin: 1,end: 1.01), weight: 1),
-
           TweenSequenceItem(tween: Tween(begin:1.015,end: 1.05), weight: 1)
           ]
     ).chain(CurveTween(curve: Curves.easeInOutCubic)).animate(_controller);
@@ -49,55 +49,77 @@ class _TaskWidgetState extends State<TaskWidget> with TickerProviderStateMixin{
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 100,
-      padding: const EdgeInsets.only(top: 15,left: 20, right: 15,bottom: 15 ),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(23),
-        border: Border.all(color: Colors.black, width: 1.5, ),
-        color:  const Color.fromRGBO(247, 218, 210, 1)
-      ),
-      child: Column(
-        children: [
-          Row(
+    return GestureDetector(
+      onHorizontalDragDown: (_){
+        startPosition = _.localPosition.dx;
+      },
+      onHorizontalDragUpdate: (_){
+        if(_.localPosition.dx-startPosition>0){
+          swipeValue = _.localPosition.dx-startPosition;
+          setState(() {
+          });
+        }
+      },
+      onHorizontalDragEnd: (_) {
+        if(swipeValue > 50){
+          EditController.instance.selectTaskController.add( widget.taskMap.key.id! );
+          swipeValue=0;
+          Navigator.pop(context);
+        }
+      },
+      child: Transform.translate(
+        offset: Offset(swipeValue, 0),
+        child: Container(
+          width: 100,
+          padding: const EdgeInsets.only(top: 15,left: 20, right: 15,bottom: 15 ),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(23),
+            border: Border.all(color: Colors.black, width: 1.5, ),
+            color:  const Color.fromRGBO(247, 218, 210, 1)
+          ),
+          child: Column(
             children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: (){
-                    EditController.instance.editController.add(MapEntry(widget.taskMap.key.id!, -2));
-                    // editTaskName(int widget.taskMap.key.id);
-                    },
-                  child: Text( widget.taskMap.key.title , style: const TextStyle(fontSize: 24, color: Colors.black, fontWeight: FontWeight.w800,height: 1.0), )) ),
-              GestureDetector(
-                  onTap: (){
-                    EditController.instance.editController.add( MapEntry(widget.taskMap.key.id!,-1));
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: (){
+                        EditController.instance.editController.add(MapEntry(widget.taskMap.key.id!, -2));
+                        // editTaskName(int widget.taskMap.key.id);
+                        },
+                      child: Text( widget.taskMap.key.title , style: const TextStyle(fontSize: 24, color: Colors.black, fontWeight: FontWeight.w800,height: 1.0), )) ),
+                  GestureDetector(
+                      onTap: (){
+                        EditController.instance.editController.add( MapEntry(widget.taskMap.key.id!,-1));
+                      },
+                      child: plusIcon(),
+                  )
+                ],
+              ),
+              if( widget.taskMap.value.isNotEmpty)
+              SizedBox(
+                width: double.maxFinite,
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  physics:const NeverScrollableScrollPhysics(),
+                  itemCount:  widget.taskMap.value.length,
+                  itemBuilder: (context, index){
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 7),
+                      child: SubTaskWidget(
+                          taskId: widget.taskMap.key.id!,
+                          subtaskId: widget.taskMap.value.elementAt(index).subtaskId!,
+                          subtitle: widget.taskMap.value.elementAt(index).subtitle,
+                          toggleOn: widget.taskMap.value.elementAt(index).toggleOn
+                      ),
+                    );
                   },
-                  child: plusIcon(),
-              )
+                  padding: const EdgeInsets.only(left: 5,top: 4,right: 0,bottom: 10),
+                ),
+              ),
             ],
           ),
-          if( widget.taskMap.value.isNotEmpty)
-          SizedBox(
-            width: double.maxFinite,
-            child: ListView.builder(
-              shrinkWrap: true,
-              physics:const NeverScrollableScrollPhysics(),
-              itemCount:  widget.taskMap.value.length,
-              itemBuilder: (context, index){
-                return Padding(
-                  padding: const EdgeInsets.only(top: 7),
-                  child: SubTaskWidget(
-                      taskId: widget.taskMap.key.id!,
-                      subtaskId: widget.taskMap.value.elementAt(index).subtaskId!,
-                      subtitle: widget.taskMap.value.elementAt(index).subtitle,
-                      toggleOn: widget.taskMap.value.elementAt(index).toggleOn
-                  ),
-                );
-              },
-              padding: const EdgeInsets.only(left: 5,top: 4,right: 0,bottom: 10),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

@@ -6,6 +6,7 @@ import 'package:chaidoro20/editing.dart';
 import 'package:flutter/material.dart';
 import 'package:chaidoro20/Assets/svgs.dart';
 import 'package:chaidoro20/Assets/custom_widgets.dart';
+import 'Models/task.dart';
 import 'main.dart';
 
 class TimerPage extends StatefulWidget {
@@ -15,13 +16,13 @@ class TimerPage extends StatefulWidget {
   State<TimerPage> createState() => _TimerPageState();
 }
 
-class _TimerPageState extends State<TimerPage> with RouteAware, SingleTickerProviderStateMixin{
+class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMixin{
   // vars for clock
   bool _isWorkTime = true;
   bool _clockIsOn = false;
   Duration _timerDuration = const Duration(minutes: 25);
   Timer? _timer;
-  late Stream<int> _taskUpdateStream ;
+  late Stream<Task> _taskUpdateStream ;
 
   late AnimationController _controller ;
 
@@ -29,25 +30,18 @@ class _TimerPageState extends State<TimerPage> with RouteAware, SingleTickerProv
   Timer? _scaleTimer;
   late Animation<double> _scaleAnimation ;
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    routeObserver.subscribe(this, ModalRoute.of(context) as PageRoute<dynamic>);
-  }
 
-  @override
-  void didPopNext() {
-    setState(() {});
-  }
   @override
   void initState() {
     // TODO: implement initState
     super.initState();
-    _taskUpdateStream = EditController.instance.selectTaskController.stream;
+    _taskUpdateStream = EditController.instance.onTaskSelect();
     _taskUpdateStream.listen((event) async {
+      print( EditController.instance.lastTask.title);
+      print("set fr");
+      setState(() {});
       if(_timer!=null){
         if(_timer!.isActive){
-          int a = EditController.instance.lastTask.id!;
           await DbProvider.instance.insertProgressInstance(ProgressInstance(dateUpdated: DateTime.now(), taskId: EditController.instance.lastTask.id! , seconds: _timer!.tick));
           await DbProvider.instance.updateTaskTime(EditController.instance.lastTask.id ?? 0, _timer!.tick);
         }

@@ -17,7 +17,9 @@ class EditController {
     StreamSubscription? triggerSubscription ;
     Future<void> sendUpdate(int _) async {
       if (!ctlr.isClosed) {
+        print("worked?");
         lastTask =  await DbProvider.instance.queryTaskAlone(_);
+        ctlr.add(lastTask);
       }
     }
     ctlr = StreamController<Task>(

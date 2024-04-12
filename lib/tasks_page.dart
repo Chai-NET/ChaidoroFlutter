@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:chaidoro20/Assets/SubTaskWidget.dart';
@@ -29,6 +30,7 @@ class _TaskPageState extends State<TaskPage> with TickerProviderStateMixin, Rout
   late AnimationController _animationController ;
   late Animation<double> blurAnimation;
 
+  late StreamSubscription<bool> selectSubscription ;
   MapEntry<Task, List<SubTask>> selectedTaskMap =<Task, List<SubTask>> { Task(id:0,title: "", dateCreated: DateTime.now(),seconds: 0) : <SubTask>[]}.entries.first ;
 
 
@@ -60,7 +62,7 @@ class _TaskPageState extends State<TaskPage> with TickerProviderStateMixin, Rout
     });
 
     //TaskView
-    DbProvider.instance.updateController.listen((event) async{
+    selectSubscription = DbProvider.instance.updateController.listen((event) async{
       selectedTaskMap = await DbProvider.instance.queryTaskId(editTaskId) ;
       setState(() {
       });
@@ -433,6 +435,7 @@ class _TaskPageState extends State<TaskPage> with TickerProviderStateMixin, Rout
 
   @override
   void dispose(){
+    selectSubscription.cancel();
     _animationController.dispose();
     _controller.dispose();
     _focusNode.dispose();
