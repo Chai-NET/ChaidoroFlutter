@@ -3,12 +3,12 @@ import 'dart:ui';
 
 import 'package:chaidoro20/Assets/SubTaskWidget.dart';
 import 'package:chaidoro20/Assets/custom_widgets.dart';
-import 'package:chaidoro20/Assets/task_widget.dart';
 import 'package:chaidoro20/screen_dimension.dart';
-import 'package:chaidoro20/db/db_provider.dart';
+import 'package:chaidoro20/Providers/db_provider.dart';
 import 'package:chaidoro20/task_list_view.dart';
 import 'package:flutter/material.dart';
 import 'Assets/svgs.dart';
+import 'Components/Calendar.dart';
 import 'Models/task.dart';
 import 'main.dart';
 import 'editing.dart';
@@ -207,7 +207,7 @@ class _TaskPageState extends State<TaskPage> with TickerProviderStateMixin, Rout
                           padding:const EdgeInsets.only(bottom: 15),
                           child:  FittedBox(
                             fit: BoxFit.fitHeight,
-                            child: Text(dateTimeFormatter(DateTime.now()),style:const TextStyle(fontWeight: FontWeight.w700,fontSize: 20),
+                            child: Text(Calendar.dateTimeFormatter(DateTime.now()),style:const TextStyle(fontWeight: FontWeight.w700,fontSize: 20),
                             ),
                           ),
                         ),

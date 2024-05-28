@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:chaidoro20/db/db_provider.dart';
-
+import 'package:chaidoro20/Providers/db_provider.dart';
 import '../editing.dart';
 class SubTaskWidget extends StatelessWidget {
   final int subtaskId;

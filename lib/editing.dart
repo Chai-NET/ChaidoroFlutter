@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:chaidoro20/db/db_provider.dart';
+import 'package:chaidoro20/Providers/db_provider.dart';
 
 import 'Models/task.dart';
 

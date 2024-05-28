@@ -1,13 +1,14 @@
 import 'dart:async';
+import 'dart:core';
+import 'dart:math';
 import 'package:chaidoro20/Models/progess_instance.dart';
 import 'package:chaidoro20/screen_dimension.dart';
-import 'package:chaidoro20/db/db_provider.dart';
+import 'package:chaidoro20/Providers/db_provider.dart';
 import 'package:chaidoro20/editing.dart';
 import 'package:flutter/material.dart';
 import 'package:chaidoro20/Assets/svgs.dart';
 import 'package:chaidoro20/Assets/custom_widgets.dart';
 import 'Models/task.dart';
-import 'main.dart';
 
 class TimerPage extends StatefulWidget {
   const TimerPage({super.key});
@@ -20,7 +21,11 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
   // vars for clock
   bool _isWorkTime = true;
   bool _clockIsOn = false;
-  Duration _timerDuration = const Duration(minutes: 25);
+
+  final Duration _workDuration = const Duration(minutes:25);
+  final Duration _breakDuration = const Duration(minutes:5);
+
+  Duration _timerDuration =  const Duration(minutes:25);
   Timer? _timer;
   late Stream<Task> _taskUpdateStream ;
 
@@ -28,7 +33,7 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
 
   //vars for reset animation
   Timer? _scaleTimer;
-  late Animation<double> _scaleAnimation ;
+  late Animation<double> _spinAnimation ;
 
 
   @override
@@ -47,14 +52,15 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
         }
       }
     });
-    _controller = AnimationController(duration: const Duration(milliseconds: 500),vsync: this);
+    _controller = AnimationController(duration: const Duration(milliseconds: 1000),vsync: this);
     _controller.addListener(() {
       setState(() {
-
       });
     });
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 1.08).chain(CurveTween(curve: Curves.easeInOutQuart)).animate(_controller);
+    _spinAnimation = Tween<double>(begin: 0, end: pi/2).chain(CurveTween(curve: Curves.easeInOutQuart)).animate(_controller);
   }
+  double _bottomInset = 0;
+
   double _screenOffset = 0;
   double _slide = 0;
   bool _settingsOn = false;
@@ -134,52 +140,54 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
                     ),
                   ),
                 ),
-                Center(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTap: () async {
-                      if(_clockIsOn){
-                        _clockIsOn = false;
-                        if(_isWorkTime&&EditController.instance.lastTask.id!=null){
-                          await DbProvider.instance.insertProgressInstance(ProgressInstance(dateUpdated: DateTime.now(), taskId: EditController.instance.lastTask.id! , seconds: _timer!.tick));
-                          await DbProvider.instance.updateTaskTime(EditController.instance.lastTask.id ?? 0, _timer!.tick);
-                        }
-                        _timer?.cancel();
-                      }else{
-                        _clockIsOn = true;
-                        _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-                          if(_timerDuration.inSeconds!=0){
-                            _timerDuration = Duration(seconds: _timerDuration.inSeconds - 1) ;
+                SizedBox(
+                  width: 100.vw(context) + 40,
+                  height: 100.vw(context) + 140,
+                ),
+                GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () async {
+                    if(_clockIsOn){
+                      _clockIsOn = false;
+                      if(_isWorkTime&&EditController.instance.lastTask.id!=null){
+                        await DbProvider.instance.insertProgressInstance(ProgressInstance(dateUpdated: DateTime.now(), taskId: EditController.instance.lastTask.id! , seconds: _timer!.tick));
+                        await DbProvider.instance.updateTaskTime(EditController.instance.lastTask.id ?? 0, _timer!.tick);
+                      }
+                      _timer?.cancel();
+                    }
+                    else{
+                      _clockIsOn = true;
+                      _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+                        if(_timerDuration.inSeconds!=0){
+                          _timerDuration = Duration(seconds: _timerDuration.inSeconds - 1) ;
+                        }else{
+                          if(_isWorkTime){
+                            _isWorkTime = false;
+                            _timerDuration = _breakDuration;
                           }else{
-                            if(_isWorkTime){
-                              _isWorkTime = false;
-                              _timerDuration = const Duration(minutes: 5);
-                            }else{
-                              _isWorkTime = true ;
-                              _timerDuration = const Duration( minutes: 25 );
-                            }
+                            _isWorkTime = true ;
+                            _timerDuration = _workDuration;
                           }
-                          setState(() {});
-                        });
+                        }
+                        setState(() {});
+                      });
+                    }
+                  },
+                  onVerticalDragStart: (details){
+                    _bottomInset = details.globalPosition.dy;
+                  },
+                  onVerticalDragUpdate: (details){
+                    if(_timer!=null){
+                      if(_isWorkTime){
+                        _controller.value = ((_bottomInset - details.globalPosition.dy)/(100.vw(context) + 40)<0)? -(_bottomInset - details.globalPosition.dy)/(100.vw(context) + 40) :  (_bottomInset - details.globalPosition.dy)/(100.vw(context) + 40) ;
+                      }else{
+                        _controller.value = 1 - (((_bottomInset - details.globalPosition.dy)/(100.vw(context) + 40)<0)? -(_bottomInset - details.globalPosition.dy)/(100.vw(context) + 40) :  (_bottomInset - details.globalPosition.dy)/(100.vw(context) + 40)) ;
                       }
+                    }
                     },
-                    onLongPressDown: (values){
-                      if(_timer!=null){
-                        _controller.forward();
-                      }
-                    },
-                    onLongPressCancel: (){
-                      if(_timer!=null){
-                        _controller.stop();
-                        _controller.reverse(from: _controller.value);
-                      }
-                    },
-                    onLongPressStart: (values){
-                      _controller.reverse();
-                    },
-                    onLongPress: () async {
-                      if(_timer!=null){
-                        if(_isWorkTime){
+                  onVerticalDragEnd: (details) async {
+                      if(_isWorkTime){
+                        if(_controller.value>0.5){
                           if(EditController.instance.lastTask.id!=null){
                             await DbProvider.instance.insertProgressInstance(ProgressInstance(dateUpdated: DateTime.now(), taskId: EditController.instance.lastTask.id! , seconds: _timer!.tick));
                             await DbProvider.instance.updateTaskTime(EditController.instance.lastTask.id ?? 0, _timer!.tick);
@@ -187,88 +195,164 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
                           _isWorkTime = false;
                           _timerDuration = const Duration(minutes: 5);
                           _timer?.cancel();
-                        }else{
+                          _controller.forward(from:_controller.value);
+                        }
+                        else{
+                          _controller.reverse(from:_controller.value);
+                        }
+                      }
+                      else{
+                        if(_controller.value<0.5){
                           _isWorkTime = true ;
                           _timerDuration = const Duration( minutes: 25 );
                           _timer?.cancel();
+                          _controller.reverse(from: _controller.value);
                         }
-                        _clockIsOn = false;
+                        else{
+                          _controller.forward(from: _controller.value);
+                        }
+                      }
+                      _bottomInset = 0;
+                      _clockIsOn = false;
+                      setState(() {});
+
+                  },
+                  onHorizontalDragDown: (details){
+                    _screenOffset = details.globalPosition.dx;
+                  },
+                  onHorizontalDragUpdate: (values){
+                    if(_settingsOn){
+                      _slide = values.globalPosition.dx - _screenOffset + 72.vw(context);
+                      if(_slide - 72.vw(context)<0){
                         setState(() {});
                       }
-                    },
-                    onHorizontalDragDown: (details){
-                      _screenOffset = details.globalPosition.dx;
-                    },
-                    onHorizontalDragUpdate: (values){
-                      if(_settingsOn){
-                        _slide = values.globalPosition.dx - _screenOffset + 72.vw(context);
-                        if(_slide - 72.vw(context)<0){
-                          setState(() {});
-                        }
-                      }else{
-                        _slide = values.globalPosition.dx - _screenOffset;
-                        if(_slide>0){
-                          setState(() {});
-                        }
-                        if(_slide < - 170){
-                          Navigator.pushNamed(context, 'tasks');
-                        }
+                    }else{
+                      _slide = values.globalPosition.dx - _screenOffset;
+                      if(_slide>0){
+                        setState(() {});
                       }
-                    },
-                    onHorizontalDragEnd: (details){
-                      if(_settingsOn){
-                        if(_slide - 72.vw(context) <-80){
-                          _settingsOn = false;
-                          _slide =0;
-                          setState(() {});
-                        }else {
-                          _slide = 72.vw(context);
-                          setState(() {});
-                        }
-                      }else{
-                        if(_slide > 170){
-                          _settingsOn = true;
-                          _slide = 72.vw(context);
-                          setState(() {});
-                        }else {
-                          _slide = 0;
-                          setState(() {});
-                        }
+                      if(_slide < - 170){
+                        Navigator.pushNamed(context, 'tasks');
                       }
-                    },
-                    child: Transform.scale(
-                      scale: _scaleAnimation.value,
-                      child: Container(
-                        margin: const  EdgeInsets.only(bottom: 100),
-                        width: 100.vw(context) - 60,
-                        height: 100.vw(context) - 60,
-                        padding: EdgeInsets.all(15.vw(context)-15),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.max,
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: Padding(
-                                padding:const  EdgeInsets.symmetric(horizontal: 15),
-                                child: FittedBox(
-                                  fit: BoxFit.fitWidth,
-                                  child: Text("${_timerDuration.inMinutes}", style: const TextStyle(fontWeight: FontWeight.w800,),)),
-                              )),
-                            Expanded(
-                              child: Padding(
-                                padding:const  EdgeInsets.symmetric(horizontal: 15),
-                                child: FittedBox(
-                                  fit: BoxFit.fitWidth,
-                                  child: Text(
-                                    "${(_timerDuration.inSeconds%60<10) ? "0${_timerDuration.inSeconds%60}" : _timerDuration.inSeconds%60}",
-                                    style: const TextStyle(fontWeight: FontWeight.w400,)
+                    }
+                  },
+                  onHorizontalDragEnd: (details){
+                    if(_settingsOn){
+                      if(_slide - 72.vw(context) <-80){
+                        _settingsOn = false;
+                        _slide =0;
+                        setState(() {});
+                      }else {
+                        _slide = 72.vw(context);
+                        setState(() {});
+                      }
+                    }else{
+                      if(_slide > 170){
+                        _settingsOn = true;
+                        _slide = 72.vw(context);
+                        setState(() {});
+                      }else {
+                        _slide = 0;
+                        setState(() {});
+                      }
+                    }
+                  },
+                  child: SizedBox(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        SizedBox(
+                          width: 100.vw(context) + 40,
+                          height: 100.vw(context) + 140,
+                        ),
+                        Container(
+                          margin: const  EdgeInsets.only(bottom: 100),
+                          width: 100.vw(context) - 60,
+                          height: 100.vw(context) - 60,
+                          padding: const EdgeInsets.all(50),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.max,
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: Padding(
+                                  padding:const  EdgeInsets.symmetric(horizontal: 15),
+                                  child: FittedBox(
+                                    fit: BoxFit.fitWidth,
+                                    child: Transform(
+                                      alignment: Alignment.topCenter,
+                                      transform: Matrix4.rotationX(_spinAnimation.value),
+                                      child: Container(
+                                          color:  const Color.fromRGBO(247, 218, 210, 1),
+                                          child: Text(_getWorkTimerMinuteString(), style: const TextStyle(fontWeight: FontWeight.w800),)),
+                                    )),
+                                )),
+                              Expanded(
+                                child: Padding(
+                                  padding:const  EdgeInsets.symmetric(horizontal: 15),
+                                  child: FittedBox(
+                                    fit: BoxFit.fitWidth,
+                                    child: Transform(
+                                      alignment: Alignment.topCenter,
+                                      transform: Matrix4.rotationX(_spinAnimation.value),
+                                      child: Container(
+                                        color:  const Color.fromRGBO(247, 218, 210, 1),
+                                        child: Text(
+                                            _getWorkTimerSecondString(),style: const TextStyle(fontWeight: FontWeight.w400,)
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        )
-                      ),
+                            ],
+                          )
+                        ),
+                        Container(
+                            margin: const  EdgeInsets.only(bottom: 100),
+                            width: 100.vw(context) - 60,
+                            height: 100.vw(context) - 60,
+                            padding: const EdgeInsets.all(50),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.max,
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(
+                                    child: Padding(
+                                      padding:const  EdgeInsets.symmetric(horizontal: 15),
+                                      child: FittedBox(
+                                          fit: BoxFit.fitWidth,
+                                          child: Transform(
+                                            alignment: Alignment.topCenter,
+                                            transform: Matrix4.rotationX((pi/2-_spinAnimation.value)),
+                                            child: Container(
+                                                color:  const Color.fromRGBO(247, 218, 210, 1),
+                                                child: Text(_getBreakTimerMinuteString(), style: const TextStyle(fontWeight: FontWeight.w800),)),
+                                          )),
+                                    )),
+                                Expanded(
+                                  child: Padding(
+                                    padding:const  EdgeInsets.symmetric(horizontal: 15),
+                                    child: FittedBox(
+                                      fit: BoxFit.fitWidth,
+                                      child: Transform(
+                                        alignment: Alignment.topCenter,
+                                        transform: Matrix4.rotationX((pi/2-_spinAnimation.value)),
+                                        child: Container(
+                                          color:  const Color.fromRGBO(247, 218, 210, 1),
+                                          child: Text(
+                                              _getBreakTimerSecondString(),
+                                              style: const TextStyle(fontWeight: FontWeight.w400,)
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -638,5 +722,37 @@ class _TimerPageState extends State<TimerPage> with SingleTickerProviderStateMix
     super.dispose();
     _timer?.cancel();
   }
+  String _getWorkTimerMinuteString(){
+    if(!_isWorkTime) {
+      return "${_workDuration.inMinutes}";
+    }else{
+      return (_timerDuration.inMinutes<10)? "0${_timerDuration.inMinutes}": "${_timerDuration.inMinutes}";
+    }
+  }
+  String _getWorkTimerSecondString(){
+    if(!_isWorkTime) {
+      return "00";
+    }else{
+      return (_timerDuration.inSeconds%60<10) ? "0${_timerDuration.inSeconds%60}" : "${_timerDuration.inSeconds%60}";
+    }
+  }
+  String _getBreakTimerMinuteString(){
+    if(_isWorkTime){
+      return (_breakDuration.inMinutes<10)? "0${_breakDuration.inMinutes}": "${_breakDuration.inMinutes}";
+    }else{
+      return (_timerDuration.inMinutes<10)? "0${_timerDuration.inMinutes}": "${_timerDuration.inMinutes}";
+    }
+  }
+
+  String _getBreakTimerSecondString(){
+    if(_isWorkTime){
+      return "00";
+    }else{
+      return (_timerDuration.inSeconds%60<10) ? "0${_timerDuration.inSeconds%60}" : "${_timerDuration.inSeconds%60}";
+    }
+  }
+
 }
+
+
 

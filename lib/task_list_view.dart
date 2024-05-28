@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:chaidoro20/Assets/task_widget.dart';
 import 'package:chaidoro20/Models/task.dart';
 
-import 'db/db_provider.dart';
+import 'Providers/db_provider.dart';
 
 class TaskListView extends StatefulWidget {
   const TaskListView({

@@ -1,11 +1,8 @@
-import 'dart:async';
 import 'package:chaidoro20/Assets/SubTaskWidget.dart';
 import 'package:chaidoro20/Assets/svgs.dart';
 import 'package:flutter/material.dart';
 import '../Models/task.dart';
-import '../db/db_provider.dart';
 import '../editing.dart';
-import 'custom_widgets.dart';
 
 class TaskWidget extends StatefulWidget {
 

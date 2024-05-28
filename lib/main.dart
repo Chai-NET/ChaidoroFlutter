@@ -3,7 +3,7 @@ import 'package:chaidoro20/timer_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'tasks_page.dart';
-import 'db/db_provider.dart';
+import 'Providers/db_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -122,7 +122,9 @@ class _MyHomePageState extends State<MyHomePage> {
     double slide = 0;
     return Center(
       child: Container(
-        padding: EdgeInsets.only(top: padding.top,bottom: padding.bottom),
+        padding: EdgeInsets.only(
+            top: padding.top,bottom: padding.bottom
+        ),
         child: const TimerPage(),
       )
     );
